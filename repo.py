@@ -29,12 +29,14 @@ BACKPORTED = (
     'de.robv.android.xposed.installer',
     'de.robv.android.xposed.mods.appsettings',
     'uk.co.villainrom.pulser.allowlongsms',
+    'com.gzplanet.xposed.xperiaphonevibrator',
 )
 
 REPLACE = (
     ('github.com/M66B/XPrivacy', 'github.com/liudongmiao/XPrivacy'),
     ('github.com/rovo89/XposedInstaller', 'github.com/liudongmiao/XposedInstaller'),
     ('github.com/rovo89/XposedAppSettings', 'github.com/liudongmiao/XposedAppSettings'),
+    ('github.com/itandy/xperia_phone_vibrator', 'github.com/liudongmiao/xperia_phone_vibrator'),
 )
 
 def get_nodes_value(node, key):
