@@ -31,6 +31,7 @@ BACKPORTED = (
     'uk.co.villainrom.pulser.allowlongsms',
     'com.gzplanet.xposed.xperiaphonevibrator',
     'de.robv.android.xposed.mods.playstorefix',
+    'com.zst.xposed.removeusbstoragewarning',
 )
 
 REPLACE = (
