@@ -32,6 +32,7 @@ BACKPORTED = (
     'com.gzplanet.xposed.xperiaphonevibrator',
     'de.robv.android.xposed.mods.playstorefix',
     'com.zst.xposed.removeusbstoragewarning',
+    'com.mohammadag.kitkattoastbackport',
 )
 
 REPLACE = (
