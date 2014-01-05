@@ -67,14 +67,12 @@ def get_apk(download, md5sum):
     basename = os.path.join(XPOSED, os.path.basename(download))
     if os.path.isfile(basename):
         if md5sum != md5(open(basename, "rb").read()).hexdigest():
-            raise SystemExit("md5 fail")
             os.remove(basename)
 
     if not os.path.isfile(basename):
         urllib.urlretrieve(download, basename)
 
     if md5sum != md5(open(basename, "rb").read()).hexdigest():
-        raise SystemExit("md5 fail")
         os.remove(basename)
         return None
 
