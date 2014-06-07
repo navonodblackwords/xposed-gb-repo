@@ -32,7 +32,7 @@ BACKPORTED = (
     'com.gzplanet.xposed.xperiaphonevibrator',
     'de.robv.android.xposed.mods.playstorefix',
     'com.zst.xposed.removeusbstoragewarning',
-    'com.mohammadag.kitkattoastbackport',
+    # 'com.mohammadag.kitkattoastbackport',
 )
 
 REPLACE = (
@@ -62,18 +62,29 @@ def get_node_value(node, key):
         return get_nodes_value(node, key)
 
 def get_apk(download, md5sum):
-    if not download or not md5sum:
+    if not download:
         return None
 
-    basename = os.path.join(XPOSED, os.path.basename(download))
+    downloadname = os.path.basename(download)
+    if not downloadname.endswith(".apk"):
+        downloadname = md5(downloadname).hexdigest() + ".apk"
+
+    if not os.path.isdir(XPOSED):
+        os.mkdir(XPOSED)
+    basename = os.path.join(XPOSED, os.path.basename(downloadname))
+
+    if os.path.isfile('%s.json' % basename):
+        # skip md5sum if json file is found
+        return basename
+
     if os.path.isfile(basename):
-        if md5sum != md5(open(basename, "rb").read()).hexdigest():
+        if md5sum and md5sum != md5(open(basename, "rb").read()).hexdigest():
             os.remove(basename)
 
     if not os.path.isfile(basename):
         urllib.urlretrieve(download, basename)
 
-    if md5sum != md5(open(basename, "rb").read()).hexdigest():
+    if md5sum and md5sum != md5(open(basename, "rb").read()).hexdigest():
         os.remove(basename)
         return None
 
@@ -85,12 +96,21 @@ def check_sdk(basename):
         return (sdk, {})
 
     version = {}
+    cache = '%s.json' % basename
+    if os.path.exists(cache):
+        try:
+            version = json.loads(open(cache).read())
+            return (version['sdk'], version)
+        except:
+            pass
+
     for line in os.popen('%s d badging %s' % (AAPT, basename)).readlines():
         if line.startswith('sdkVersion:'):
             try:
                 sdk = int(line.strip()[12:-1])
             except:
                 sdk = 0
+            version['sdk'] = sdk
         elif line.startswith('package:'):
             items = line.split("'")
             while items:
@@ -101,6 +121,11 @@ def check_sdk(basename):
                     version['code'] = items.pop(0)
                 elif item.endswith('versionName='):
                     version['name'] = items.pop(0)
+
+    with open('%s.tmp' % cache, 'w') as w:
+        w.write(json.dumps(version))
+
+    os.rename('%s.tmp' % cache, cache);
 
     return (sdk, version)
 
@@ -202,6 +227,7 @@ def check_repo():
     repo_xml_gz = os.path.join(TMPDIR, 'repo.xml.gz')
     urllib.urlretrieve(REPO_XML_GZ, repo_xml_gz)
     repoxml = gzip.open(repo_xml_gz, 'rb').read()
+    os.rename(repo_xml_gz, os.path.join(WEBDIR, 'repo.xml.gz'))
     doc = minidom.parseString(repoxml)
     for module in doc.getElementsByTagName("module"):
         package = module.getAttribute("package")
@@ -224,7 +250,7 @@ def check_repo():
             module.parentNode.removeChild(module)
         module.setAttribute('package', package)
     doc.normalize()
-    content = doc.toxml()
+    content = doc.toxml().encode('utf8')
     for x, y in REPLACE:
         content = content.replace(x, y)
 
