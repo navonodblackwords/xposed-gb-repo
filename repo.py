@@ -24,9 +24,10 @@ HTTP = 'http://piebridge.me/'
 # original repo.xml.gz
 REPO_XML_GZ = 'http://dl.xposed.info/repo.xml.gz'
 
+FRAMEWORK = 'de.robv.android.xposed.installer'
+
 BACKPORTED = (
     'biz.bokhorst.xprivacy',
-    'de.robv.android.xposed.installer',
     'de.robv.android.xposed.mods.appsettings',
     'uk.co.villainrom.pulser.allowlongsms',
     'com.gzplanet.xposed.xperiaphonevibrator',
@@ -111,6 +112,12 @@ def check_sdk(basename):
             except:
                 sdk = 0
             version['sdk'] = sdk
+        elif line.startswith('maxSdkVersion:'):
+            try:
+                maxsdk = int(line.strip()[15:-1])
+            except:
+                maxsdk = 0
+            version['maxsdk'] = sdk
         elif line.startswith('package:'):
             items = line.split("'")
             while items:
@@ -226,8 +233,17 @@ def back_ported(doc, module):
 def check_repo():
     repo_xml_gz = os.path.join(TMPDIR, 'repo.xml.gz')
     urllib.urlretrieve(REPO_XML_GZ, repo_xml_gz)
+    check_repo_sdk(0)
+    check_repo_sdk(10)
+    check_repo_sdk(15)
+    check_repo_sdk(16)
+    check_repo_sdk(17)
+    check_repo_sdk(18)
+    check_repo_sdk(19)
+
+def check_repo_sdk(api):
+    repo_xml_gz = os.path.join(TMPDIR, 'repo.xml.gz')
     repoxml = gzip.open(repo_xml_gz, 'rb').read()
-    os.rename(repo_xml_gz, os.path.join(WEBDIR, 'repo.xml.gz'))
     doc = minidom.parseString(repoxml)
     for module in doc.getElementsByTagName("module"):
         package = module.getAttribute("package")
@@ -240,11 +256,16 @@ def check_repo():
         md5sum = get_node_value(version, "md5sum")
         download = get_node_value(version, "download")
         basename = get_apk(download, md5sum)
-        sdk, meta = check_sdk(basename)
+        minsdk, meta = check_sdk(basename)
         package = meta.get('package', package)
-        if sdk > 0 and sdk < 11:
+        maxsdk = meta.get('maxsdk', 0)
+        if package == FRAMEWORK:
+            back_ported(doc, module)
+        elif api == 0:
             pass
-        elif package in BACKPORTED:
+        elif api >= minsdk and (maxsdk == 0 or api <= maxsdk):
+            pass
+        elif api == 10 and package in BACKPORTED:
             back_ported(doc, module)
         else:
             module.parentNode.removeChild(module)
@@ -254,7 +275,7 @@ def check_repo():
     for x, y in REPLACE:
         content = content.replace(x, y)
 
-    oldpath = os.path.join(TMPDIR, 'repo.gb.xml')
+    oldpath = os.path.join(TMPDIR, 'repo.%s.xml' % api)
     if os.path.isfile(oldpath):
         oldxml = open(oldpath, 'rb').read()
         if md5(oldxml).hexdigest() == md5(content).hexdigest():
@@ -263,13 +284,15 @@ def check_repo():
     with open(oldpath, 'wb') as w:
         w.write(content)
 
-    with open(os.path.join(WEBDIR, 'repo.gb.xml'), 'w') as w:
+    tmppath = os.path.join(TMPDIR, 'repo.%s.xml.tmp' % api)
+    with open(tmppath, 'w') as w:
         w.write(content)
+    os.rename(tmppath, os.path.join(WEBDIR, 'repo.%s.xml' % api))
 
-    tmppathgz = os.path.join(TMPDIR, 'repo.gb.xml.gz')
+    tmppathgz = os.path.join(TMPDIR, 'repo.%s.xml.gz' % api)
     with gzip.open(tmppathgz, 'wb') as w:
         w.write(content)
-    os.rename(tmppathgz, os.path.join(WEBDIR, 'repo.gb.xml.gz'))
+    os.rename(tmppathgz, os.path.join(WEBDIR, 'repo.%s.xml.gz' % api))
 
 check_repo()
 
